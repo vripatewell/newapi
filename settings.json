@@ -21,6 +21,12 @@
       "desc": "Openai chat",
       "status": "Active",
       "path": "/ai/openai?apikey=&text="
+    },
+    {
+      "name": "Gemini",
+      "desc": "Google Gemini (pilih flash/pro dengan mode, default flash)",
+      "status": "Active",
+      "path": "/ai/gemini?apikey=&text="
     }
    ],
   "orderkuota": [
