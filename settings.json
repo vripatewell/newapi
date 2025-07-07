@@ -23,10 +23,10 @@
       "path": "/ai/openai?apikey=&text="
     },
     {
-      "name": "Gemini",
-      "desc": "Google Gemini (pilih flash/pro dengan mode, default flash)",
+      "name": "Hikmal AI",
+      "desc": "Gemini AI versi Hikmal — didukung oleh Riki Shop ✨",
       "status": "Active",
-      "path": "/ai/gemini?apikey=&text="
+      "path": "/ai/hikmalai?apikey=&text=&image="
     }
    ],
   "orderkuota": [
