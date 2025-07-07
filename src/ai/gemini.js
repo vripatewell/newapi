@@ -58,7 +58,7 @@ Ayo, jangan ragu! Order sekarang juga dan nikmati dunia digital dari sentuhan sa
   }
 
   // Endpoint utama
-  app.get('/ai/openai', async (req, res) => {
+  app.get('/ai/gemini', async (req, res) => {
     try {
       const { text, apikey, image } = req.query;
 
