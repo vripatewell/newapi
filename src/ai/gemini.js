@@ -1,86 +1,99 @@
 module.exports = function(app) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-  // Inisialisasi Hikmal AI (tanpa menyebut Google di output)
-  const genAI = new GoogleGenerativeAI("AIzaSyBOOIlVLwVKJeTsyHUt_yKnGKAVtz5ZAzU");
+  // Inisialisasi Hikmal AI (Gemini)
+  const genAI = new GoogleGenerativeAI("AIzaSyBOOIlVLwVKJeTsyHUt_yKnGKAVtz5ZAzU"); // Ganti dengan API key kamu
 
-  // Jawaban khusus estetik
+  // List kata estetik / branding custom
   function checkEstheticResponses(text) {
-    const lower = text.toLowerCase();
-
-    if (lower.includes("nama kamu siapa") || lower.includes("siapa nama kamu") || lower.includes("kamu siapa")) {
-      return `✨ Perkenalkan, namaku adalah **Hikmal AI**, asisten pintar yang terlahir dari alur kode dan keindahan algoritma. ✨`;
+    const lower = (text || "").toLowerCase();
+    if (lower.includes("nama kamu siapa")) {
+      return `✨ Aku adalah **Hikmal AI**, asisten digital berjiwa lembut dan berpengetahuan ✨`;
     }
-
-    if (lower.includes("pembuat kamu siapa") || lower.includes("siapa yang buat kamu") || lower.includes("siapa pembuat kamu")) {
-      return `🌸 Aku diciptakan oleh seseorang yang penuh visi dan dedikasi — namanya **Riki**, sang penggerak dari balik layar digital. 🌸`;
+    if (lower.includes("pembuat kamu siapa")) {
+      return `🌸 Aku lahir dari tangan kreatif sang maestro digital — **Riki**, sang arsitek dunia maya 🌸`;
     }
-
-    if (lower.includes("riki itu siapa") || lower.includes("riki shop itu siapa") || lower.includes("riki shop") || lower.includes("rikishop")) {
-      return `🌟 **Riki Shop** adalah tempat yang menyediakan segala kebutuhan digital — dari hosting, panel, script bot, jasa-jasa, hingga VPS. ✨  
-Tak hanya melayani, ia juga membuka peluang.  
-📱 Chat langsung pembuatku ya: [wa.me/6285771555374](https://wa.me/6285771555374)  
+    if (lower.includes("riki shop") || lower.includes("riki itu siapa") || lower.includes("rikishop")) {
+      return `🌟 **Riki Shop** adalah rumah digital tempat segalanya tersedia — dari VPS, panel, script bot, hingga jasa-jasa yang kamu butuhkan.  
+📞 Chat langsung ke: [wa.me/6285771555374](https://wa.me/6285771555374)  
 🌐 Sosmed: [https://rikihsopreal.vercel.app](https://rikihsopreal.vercel.app)  
-🛒 Produk: [https://toko.rikishop.my.id](https://toko.rikishop.my.id)  
-Ayo, jangan ragu! Order sekarang juga dan nikmati dunia digital dari sentuhan sang Riki! ✨`;
+🛍️ Produk: [https://toko.rikishop.my.id](https://toko.rikishop.my.id)  
+Jangan cuma lihat, langsung order yuk ✨`;
     }
-
     return null;
   }
 
-  // Fungsi utama
+  // Deteksi maksud user dari teks
+  function classifyIntent(text) {
+    const t = (text || "").toLowerCase();
+    if (t.includes("gambar apa") || t.includes("apa ini")) return "describe-image";
+    if (t.includes("tulisan") || t.includes("teks dalam gambar") || t.includes("tulisa")) return "extract-text";
+    if (t.includes("error") || t.includes("kenapa error") || t.includes("benerin") || t.includes("debug")) return "code-fix";
+    if (t === "." || t === "gemini" || t.includes("deteksi")) return "describe-image";
+    return "general";
+  }
+
+  // Fungsi utama Hikmal AI
   async function HikmalAI(textPrompt, imageBase64 = null) {
-    let model, result;
+    const model = genAI.getGenerativeModel({
+      model: imageBase64 ? "gemini-1.5-pro-vision" : "gemini-1.5-pro"
+    });
 
-    if (imageBase64) {
-      model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
-
-      const imageParts = [
-        {
-          inlineData: {
-            data: imageBase64,
-            mimeType: "image/jpeg",
-          },
-        },
-      ];
-
-      result = await model.generateContent([
-        { text: textPrompt },
-        ...imageParts,
-      ]);
-    } else {
-      model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      result = await model.generateContent(textPrompt);
-    }
+    const result = await model.generateContent(
+      imageBase64
+        ? [
+            { text: textPrompt },
+            {
+              inlineData: {
+                data: imageBase64,
+                mimeType: "image/jpeg"
+              }
+            }
+          ]
+        : textPrompt
+    );
 
     const response = await result.response;
     return response.text();
   }
 
-  // Endpoint utama
-  app.get('/ai/gemini', async (req, res) => {
+  // Route utama
+  app.get('/ai/hikmalai', async (req, res) => {
     try {
-      const { text, apikey, image } = req.query;
+      const { text, image, apikey } = req.query;
 
       if (!global.apikey || !global.apikey.includes(apikey)) {
-        return res.json({ status: false, error: 'Apikey invalid' });
+        return res.json({ status: false, error: "Apikey invalid" });
       }
 
-      if (!text) {
-        return res.json({ status: false, error: 'Parameter "text" diperlukan' });
+      if (!text && !image) {
+        return res.json({ status: false, error: "Text atau gambar harus diisi" });
       }
 
-      // Cek jika perlu jawaban estetik
-      const predefined = checkEstheticResponses(text);
-      if (predefined) {
-        return res.status(200).json({ status: true, result: predefined });
+      const special = checkEstheticResponses(text || "");
+      if (special) return res.status(200).json({ status: true, result: special });
+
+      const intent = classifyIntent(text || "");
+      let prompt = text;
+
+      // Jika hanya gambar atau trigger intent khusus
+      if (image) {
+        if (intent === "describe-image") {
+          prompt = "Tolong jelaskan gambar ini. Apa yang terlihat di dalamnya?";
+        } else if (intent === "extract-text") {
+          prompt = "Ambil dan tuliskan semua teks yang terlihat dalam gambar ini.";
+        } else if (intent === "code-fix") {
+          prompt = "Gambar ini berisi kode error. Jelaskan letak kesalahan dan berikan versi kode yang benar.";
+        } else if (!text || text.trim() === "") {
+          prompt = "Tolong jelaskan isi gambar ini.";
+        }
       }
 
-      const result = await HikmalAI(text, image);
-      res.status(200).json({ status: true, result: result });
+      const result = await HikmalAI(prompt, image);
+      res.status(200).json({ status: true, result });
 
-    } catch (error) {
-      res.json({ status: false, error: error.message });
+    } catch (err) {
+      res.json({ status: false, error: err.message });
     }
   });
 };
