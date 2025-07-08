@@ -41,27 +41,26 @@ Jangan cuma lihat, langsung order yuk ✨`;
 
   // Fungsi utama Hikmal AI
   async function HikmalAI(textPrompt, imageBase64 = null) {
-    const model = genAI.getGenerativeModel({
-      model: imageBase64 ? model: imageBase64 ? "gemini-1.5-flash" : "gemini-1.5-pro"
-    });
+  const modelName = imageBase64 ? "gemini-1.5-flash" : "gemini-1.5-pro";
+  const model = genAI.getGenerativeModel({ model: modelName });
 
-    const result = await model.generateContent(
-      imageBase64
-        ? [
-            { text: textPrompt },
-            {
-              inlineData: {
-                data: imageBase64,
-                mimeType: "image/jpeg"
-              }
+  const result = await model.generateContent(
+    imageBase64
+      ? [
+          { text: textPrompt },
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: "image/jpeg"
             }
-          ]
-        : textPrompt
-    );
+          }
+        ]
+      : textPrompt
+  );
 
-    const response = await result.response;
-    return response.text();
-  }
+  const response = await result.response;
+  return response.text();
+}
 
   // Endpoint Hikmal AI
   app.get('/ai/hikmalai', async (req, res) => {
