@@ -1,111 +1,88 @@
 module.exports = function(app) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
-  const axios = require("axios");
 
-  const genAI = new GoogleGenerativeAI("AIzaSyBOOIlVLwVKJeTsyHUt_yKnGKAVtz5ZAzU"); // Ganti dengan API kamu
+  // API KEY-mu
+  const genAI = new GoogleGenerativeAI("AIzaSyBOOIlVLwVKJeTsyHUt_yKnGKAVtz5ZAzU");
 
-  // Estetik Q&A
-  function checkEstheticResponses(text) {
-    const lower = (text || "").toLowerCase();
-    if (lower.includes("nama kamu siapa")) {
-      return `✨ Aku adalah **Hikmal AI**, asisten digital berjiwa lembut dan berpengetahuan ✨`;
+  // Fungsi utama AI: support prompt + image (base64)
+  async function HikmalAI(prom, imageBase64 = null, mode = "flash") {
+    const q = (prom || "").toLowerCase().replace(/\?/g, "").trim();
+
+    // Jawab jika ditanya nama AI
+    if (
+      /(nama (kamu|mu|ai)|who (are|r) (you|u)|what (is|')?s your name|siapa nama)/.test(q)
+    ) {
+      return `🌟 Hai, namaku *Hikmal AI*.\nAku adalah asisten digital cerdas yang siap membantu, menemani, dan memberi solusi dalam setiap aktivitasmu. Dengan semangat ramah & inovasi, aku ingin jadi teman terbaikmu di dunia digital!`;
     }
-    if (lower.includes("pembuat kamu siapa")) {
-      return `🌸 Aku lahir dari tangan kreatif sang maestro digital — **Riki**, sang arsitek dunia maya 🌸`;
+
+    // Jawab jika ditanya siapa pembuat AI
+    if (
+      /(pembuat|owner|creator|yang buat|made by|develop|author)/.test(q) &&
+      /(kamu|mu|hikmal ai|bot|ai)/.test(q)
+    ) {
+      return `💡 Aku diciptakan & dikembangkan oleh *Riki Shop*, seorang inovator yang penuh semangat dan kreativitas dalam dunia teknologi. Bersama Riki Shop, aku hadir untuk membantu, menginspirasi, dan memudahkan segala kebutuhan digitalmu.`;
     }
-    if (lower.includes("riki shop") || lower.includes("riki itu siapa") || lower.includes("rikishop")) {
-      return `🌟 **Riki Shop** adalah rumah digital tempat segalanya tersedia — dari VPS, panel, script bot, hingga jasa-jasa yang kamu butuhkan.  
-📞 Chat langsung ke: [wa.me/6285771555374](https://wa.me/6285771555374)  
-🌐 Sosmed: [https://rikihsopreal.vercel.app](https://rikihsopreal.vercel.app)  
-🛍️ Produk: [https://toko.rikishop.my.id](https://toko.rikishop.my.id)  
-Jangan cuma lihat, langsung order yuk ✨`;
+
+    // Jawab jika ditanya "riki shop siapa" atau "riki itu siapa"
+    if (
+      /(riki( shop)?|rikishop).*(siapa|what|apaan|apa|is|itu)/.test(q) ||
+      /(siapa|what|apaan|apa|is|itu).*(riki( shop)?|rikishop)/.test(q)
+    ) {
+      return `🛒 *Riki Shop* adalah toko digital modern yang menyediakan berbagai layanan:\n\n- VPS & hosting (semua kebutuhan server)\n- Panel, script bot, & tools premium\n- Jasa digital (pembuatan, setup, custom)\n- Serta banyak produk lain yang membantu aktivitasmu!\n\nKonsultasi/Order? Chat langsung pembuatku di wa.me/6285771555374\nSosmed: https://rikihsopreal.vercel.app\nProduk: https://toko.rikishop.my.id\n\nBersama Riki Shop, semua kebutuhan digitalmu pasti terbantu! ✨`;
     }
-    return null;
-  }
 
-  // Deteksi jenis permintaan
-  function classifyIntent(text) {
-    const t = (text || "").toLowerCase();
-    if (t.includes("gambar apa") || t.includes("apa ini")) return "describe-image";
-    if (t.includes("tulisan") || t.includes("teks dalam gambar") || t.includes("tulisa")) return "extract-text";
-    if (t.includes("error") || t.includes("kenapa error") || t.includes("benerin") || t.includes("debug")) return "code-fix";
-    if (t === "." || t === "gemini" || t.includes("deteksi")) return "describe-image";
-    return "general";
-  }
+    // =================== MODE MULTIMODAL (gambar + teks) ===================
+    const modelName = mode === "pro" ? "gemini-1.5-pro" : "gemini-1.5-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
 
-  // Konversi URL gambar menjadi Base64
-  async function convertImageURLToBase64(url) {
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    return Buffer.from(response.data, 'binary').toString('base64');
-  }
+    let result, jawaban;
 
-  // Fungsi utama Hikmal AI
-  async function HikmalAI(textPrompt, imageBase64 = null) {
-  const modelName = imageBase64 ? "gemini-1.5-flash" : "gemini-1.5-pro";
-  const model = genAI.getGenerativeModel({ model: modelName });
-
-  const result = await model.generateContent(
-    imageBase64
-      ? [
-          { text: textPrompt },
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: "image/jpeg"
-            }
-          }
-        ]
-      : textPrompt
-  );
-
-  const response = await result.response;
-  return response.text();
-}
-
-  // Endpoint Hikmal AI
-  app.get('/ai/hikmalai', async (req, res) => {
-    try {
-      const { text, image, apikey } = req.query;
-
-      if (!global.apikey || !global.apikey.includes(apikey)) {
-        return res.json({ status: false, creator: "Rikishopreal", error: "Apikey invalid" });
-      }
-
-      if (!text && !image) {
-        return res.json({ status: false, creator: "Rikishopreal", error: "Text atau gambar harus diisi" });
-      }
-
-      const special = checkEstheticResponses(text || "");
-      if (special) return res.status(200).json({ status: true, creator: "Rikishopreal", result: special });
-
-      let base64Image = image;
-
-      // Deteksi jika image = URL, maka konversi ke Base64
-      if (image && image.startsWith("http")) {
-        base64Image = await convertImageURLToBase64(image);
-      }
-
-      const intent = classifyIntent(text || "");
-      let prompt = text;
-
-      // Buat prompt otomatis jika perlu
-      if (base64Image) {
-        if (intent === "describe-image") {
-          prompt = "Tolong jelaskan gambar ini. Apa yang terlihat di dalamnya?";
-        } else if (intent === "extract-text") {
-          prompt = "Ambil dan tuliskan semua teks yang terlihat dalam gambar ini.";
-        } else if (intent === "code-fix") {
-          prompt = "Gambar ini berisi kode error. Jelaskan letak kesalahan dan berikan versi kode yang benar.";
-        } else if (!text || text.trim() === "") {
-          prompt = "Tolong jelaskan isi gambar ini.";
+    // Jika ada gambar (base64)
+    if (imageBase64) {
+      // Format konten multimodal: text + image
+      const imagePart = {
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg", // Ganti ke image/png jika butuh
         }
-      }
+      };
+      result = await model.generateContent({
+        contents: [{
+          parts: [
+            { text: prom },
+            { inlineData: imagePart.inlineData }
+          ]
+        }]
+      });
+      jawaban = (await result.response).text();
+    } else {
+      // Hanya teks
+      result = await model.generateContent(prom);
+      jawaban = (await result.response).text();
+    }
+    // Hilangkan mention "Google"
+    jawaban = jawaban.replace(/(model bahasa google|google generative ai|gemini ai|google ai|google)/gi, "Hikmal AI");
+    return jawaban;
+  }
 
-      const result = await HikmalAI(prompt, base64Image);
-      res.status(200).json({ status: true, creator: "Rikishopreal", result });
+  // Endpoint GET dan POST support gambar (base64)
+  app.all('/ai/gemini', async (req, res) => {
+    try {
+      const text = req.body.text || req.query.text;
+      const apikey = req.body.apikey || req.query.apikey;
+      const mode = (req.body.mode || req.query.mode || "flash").toLowerCase();
+      const image = req.body.image || req.query.image; // base64 (tanpa data:image/png;base64,)
 
-    } catch (err) {
-      res.json({ status: false, creator: "Rikishopreal", error: err.message });
+      if (!global.apikey.includes(apikey)) return res.json({ status: false, error: 'Apikey invalid' });
+      if (!text) return res.json({ status: false, error: 'Param ?text= wajib diisi' });
+
+      const result = await HikmalAI(text, image, mode);
+      res.status(200).json({
+        status: true,
+        result: result
+      });
+    } catch (error) {
+      res.json({ status: false, error: error.message });
     }
   });
-};
+}
