@@ -217,7 +217,13 @@
       "desc": "Emoji mix converter",
       "status": "Active",
       "path": "/tools/emojimix?apikey=&emoji1=&emoji2="
-    }
+    },
+    {
+  "name": "HTML Obfuscator",
+  "desc": "Mengacak & mengamankan source code HTML agar susah dibaca (anti copas), gunakan param ?html=",
+  "status": "Active",
+  "path": "/tools/obf?apikey=&html="
+}
   ],
   "stalker": [
     {
