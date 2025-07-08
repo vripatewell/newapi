@@ -42,7 +42,7 @@ Jangan cuma lihat, langsung order yuk ✨`;
   // Fungsi utama Hikmal AI
   async function HikmalAI(textPrompt, imageBase64 = null) {
     const model = genAI.getGenerativeModel({
-      model: imageBase64 ? "gemini-1.5-pro-vision" : "gemini-1.5-pro"
+      model: imageBase64 ? model: imageBase64 ? "gemini-1.5-flash" : "gemini-1.5-pro"
     });
 
     const result = await model.generateContent(
